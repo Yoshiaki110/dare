@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MY QRコード</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+  <style>
+  canvas, video{
+    border: 1px solid gray;
+  }
+  </style>
+</head>
+<body>
+
+  <video playsinline muted autoplay id="camera" hidden="hidden"></video>
+  <canvas id="picture" style="height:200px;" hidden="hidden"></canvas>
+
+  <div class="card card-body">
+    <h2>MY QRコード</h2>
+    <div id="example-2" class="carousel slide" data-interval=4000 data-ride="carousel">
+      <div class="carousel-inner">
+        <div class="carousel-item active">
+          <img src="./static/prof1.png" alt="First slide">
+        </div>
+        <div class="carousel-item">
+          <img src="./static/prof2.png" alt="Second slide">
+        </div>
+        <div class="carousel-item">
+          <img src="./static/prof3.png" alt="Third slide">
+        </div>
+        <a class="carousel-control-prev" href="#example-2" role="button" data-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="sr-only">Previous</span>
+        </a>
+        <a class="carousel-control-next" href="#example-2" role="button" data-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="sr-only">Next</span>
+        </a>
+      </div>
+    </div>
+
+    <h4>プライベート</h4>
+    <button onclick="execute('qr_line_private.jpg')" class="btn btn-info btn-lg btn-block" id="btn-line">LINE</button>
+    <button onclick="execute('qr_facebook_private.jpg')" class="btn btn-info btn-lg btn-block" id="btn-facebook">facebook</button>
+    <button onclick="execute('qr_insta_private.jpg')" class="btn btn-info btn-lg btn-block" id="btn-insta">Instagram</button>
+    <button onclick="execute('qr_tiktok_private.jpg')" class="btn btn-info btn-lg btn-block" id="btn-tiktok">TikTok</button>
+    <button onclick="execute('qr_twitter_private.jpg')" class="btn btn-info btn-lg btn-block" id="btn-twitter">Twitter</button>
+    <button onclick="execute('qr_mail_private.png')" class="btn btn-info btn-lg btn-block" id="btn-mail">メール</button>
+    <br />
+    <h4>会社</h4>
+    <button onclick="execute('qr_mail_office.png')" class="btn btn-info btn-lg btn-block" id="btn-mail-o">メール</button>
+
+    <div class="modal fade" id="modal1" tabindex="-1"
+          role="dialog" aria-labelledby="label1" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="label1">QRコード</h5>
+          </div>
+          <div class="modal-body">
+            <img src="slide1.png" id="qrcode" width="100%">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+  <script>
+  var video  = null;
+  var canvas = null;
+  var errcnt = 0;
+
+  function btnDisabled(f) {
+    document.getElementById("btn-line").disabled = f;
+    document.getElementById("btn-facebook").disabled = f;
+    document.getElementById("btn-insta").disabled = f;
+    document.getElementById("btn-tiktok").disabled = f;
+    document.getElementById("btn-twitter").disabled = f;
+    document.getElementById("btn-mail").disabled = f;
+    document.getElementById("btn-mail-o").disabled = f;
+  }
+
+  function send() {
+    const ctx = canvas.getContext("2d");
+    // canvasに画像を貼り付ける
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    const base64 = canvas.toDataURL("image/jpeg");
+    const fd = new FormData();
+    fd.append("image", base64);
+    const BASE_URL = "/axios";
+    axios
+      .post(BASE_URL, fd)
+      .then(function (response) {
+        console.log("response.data.result", response.data.result);
+        if (response.data.result == 0 && errcnt < 2) {  // 顔検出できない場合
+          ++errcnt;                         //   ２回までリトライ
+          setTimeout(send, 1000);           //   １秒後にリトライ
+        } else {                            // エラーなら何もしない
+          btnDisabled(false);               //   ボタン有効化
+          $('#modal1').modal('show')        //   QRダイアログ表示
+        }
+      })
+      .catch(function (error) {
+        console.log(error);
+        btnDisabled(false);                 // ボタン有効化
+      });
+  }
+
+  function execute(arg) {
+    btnDisabled(true);                      // ボタン無効化
+    const img = document.querySelector("#qrcode");
+    img.src = './static/' + arg;
+    errcnt = 0;
+    send();
+  }
+
+
+  window.onload = () => {
+    video  = document.querySelector("#camera");
+    canvas = document.querySelector("#picture");
+
+    /** カメラ設定 */
+    const constraints = {
+      audio: false,
+      video: {
+        width: 300,
+        height: 200,
+        facingMode: "user"   // フロントカメラを利用する
+        // facingMode: { exact: "environment" }  // リアカメラを利用する場合
+      }
+    };
+
+    /**
+    * カメラを<video>と同期
+    */
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then( (stream) => {
+      video.srcObject = stream;
+      video.onloadedmetadata = (e) => {
+        video.play();
+      };
+    })
+    .catch( (err) => {
+      console.log(err.name + ": " + err.message);
+    });
+
+  };
+  </script>
+</body>
+</html>

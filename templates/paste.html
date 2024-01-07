@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <title>Paste</title>
+  </head>
+  <body>
+    <div class="card card-body">
+      <h3>画像をペースト</h3>
+      <div class="row">
+        <div class="col-6">
+          <img id="container"/>
+        </div>
+        <div class="col-6">
+          <canvas id="canvas"></canvas>
+        </div>
+      </div>
+      <div id="edit" />
+    </div>
+    <script>
+
+    var container  = null;
+    var canvas = null;
+    var edit = null;
+
+    window.onload = () => {
+      container  = document.querySelector("#container");
+      canvas = document.querySelector("#canvas");
+      edit = document.querySelector("#edit");
+      console.log();
+    };
+
+    // 項目の修正API
+    function clickButton(id) {
+      var elm = document.getElementById(id);
+      console.log("arg", id, elm.value);
+
+      fetch('modify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          'id': id,
+          'name': elm.value
+        })
+      }).then((response) => {
+        if(!response.ok) {
+          console.log('error!');
+        } 
+        console.log('ok!');
+        return response.json();
+      }).then((data)  => {
+        console.log(data);
+      }).catch((error) => {
+        console.log(error);
+      });
+    }
+
+    // 編集画面の作成
+   function editarea(arr) {
+      // 編集画面の削除
+      while( edit.firstChild ){
+        edit.removeChild( edit.firstChild );
+      }
+      // 編集画面の作成
+      for (let r of arr) {
+        console.log(r);
+        const elm_row = document.createElement("div");
+        elm_row.className = "row";
+
+        const elm_col1 = document.createElement("div");
+        elm_col1.className = "col-4";
+        const elm_img = document.createElement("img");
+        elm_img.src = 'image?' + r['id'];
+        elm_col1.appendChild(elm_img);
+
+
+        const elm_col2 = document.createElement("div");
+        elm_col2.className = "col-4";
+        const elm_input = document.createElement("input");
+        elm_input.type  = "text";
+        elm_input.id = r['id'];
+        elm_input.className = "form-control";
+        elm_input.value = r['name'];
+        elm_col2.appendChild(elm_input);
+
+        const elm_col3 = document.createElement("div");
+        elm_col3.className = "col-2";
+        elm_col3.textContent = r['score'] + '%';
+
+        const elm_col4 = document.createElement("div");
+        elm_col4.className = "col-2";
+        const elm_button = document.createElement("button");
+        elm_button.type  = "button";
+        elm_button.id = r['id'];
+        elm_button.className = "btn btn-primary";
+        elm_button.setAttribute('onclick', "clickButton('" + r['id'] + "')");
+        elm_button.textContent = '修正';
+        elm_col4.appendChild(elm_button);
+
+        elm_row.appendChild(elm_col1);
+        elm_row.appendChild(elm_col2);
+        elm_row.appendChild(elm_col3);
+        elm_row.appendChild(elm_col4);
+        edit.appendChild(elm_row);
+      }
+    }
+
+    // 画像の登録
+    function send() {
+      const ctx = canvas.getContext("2d");
+      // canvasに画像を貼り付ける
+      canvas.width = container.width;
+      canvas.height = container.height;
+      ctx.drawImage(container, 0, 0, container.width, container.height);
+      const base64 = canvas.toDataURL("image/jpeg");
+      const fd = new FormData();
+      fd.append("image", base64);
+      const BASE_URL = "/axios";
+      axios
+        .post(BASE_URL, fd)
+        .then(function (response) {
+          console.log("response.data.result", response.data.result);
+          editarea(response.data.result);
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+    }
+
+    // 画像のペースト処理
+    document.onpaste = function(pasteEvent) {
+      var item = pasteEvent.clipboardData.items[0];
+      if (item.type.indexOf("image") === 0) {
+        var blob = item.getAsFile();
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          let dataURL = event.target.result;
+          container.src = dataURL;
+          //send();
+          setTimeout(send, 100);
+        };
+        reader.readAsDataURL(blob);
+      }
+    }
+
+
+
+    </script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+  </body>
+</html>
